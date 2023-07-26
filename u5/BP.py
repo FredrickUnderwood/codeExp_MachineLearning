@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -80,6 +81,7 @@ def calc_accuracy(data_set, V, theta1, W, theta2):
 
 def train(train_set, learning_rate, hidden_layer, num_epochs):
     train_acc = []
+    err_epoch = []
     y = train_set[:, -1]  # row_num*col_num
     X = train_set[:, :-1]
     row_num, col_num = X.shape  # _,num_inputs
@@ -97,12 +99,24 @@ def train(train_set, learning_rate, hidden_layer, num_epochs):
             V -= learning_rate * np.dot(X[i].reshape((col_num, -1)), e)
             theta1 += learning_rate * e
             theta2 += learning_rate * g
-            train_acc.append(calc_accuracy(train_set, V, theta1, W, theta2))
-
-    return train_acc
+        train_acc.append(calc_accuracy(train_set, V, theta1, W, theta2))
+        err = 0
+        for i in range(row_num):
+            b = sigmoid(np.dot(X[i], V) - theta1)
+            y_hat = sigmoid(np.dot(b, W)[0] - theta2)
+            err += ((y_hat - y[i]) ** 2) / 2
+        err_epoch.append(err)
+    return train_acc, err_epoch
 
 
 if __name__ == '__main__':
     train_set, train_features_list = generate_data_set()
-    for train_acc in train(train_set, 0.1, 17, 100):
-        print(train_acc)
+    train_acc, err_epoch = train(train_set, 0.07, 17, 100)
+    plt.title('predict accuracy')
+    plt.xlabel('train_epoch')
+    plt.plot(np.arange(len(train_acc)), train_acc)
+    plt.show()
+    plt.xlabel('train_epoch')
+    plt.title('loss')
+    plt.plot(np.arange(len(err_epoch)), err_epoch)
+    plt.show()
