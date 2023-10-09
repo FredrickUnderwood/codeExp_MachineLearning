@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
+import treePlotter
 
 
 # load data from txt
@@ -79,35 +80,25 @@ def data_preprocess(feature_list: pd.DataFrame, label_list: pd.DataFrame):
 def generate_feature_list(feature_list: pd.DataFrame, divide_values: list):
     example_num = feature_list.shape[0]
     feature_num = feature_list.shape[1]
+    discrete_feature_list = pd.DataFrame(np.nan, index=range(example_num), columns=range(feature_num))
     for i in range(feature_num):
         for j in range(example_num):
             if feature_list.iloc[j, i] <= divide_values[i]:
-                feature_list.iloc[j, i] = 0
+                discrete_feature_list.iloc[j, i] = 0
             else:
-                feature_list.iloc[j, i] = 1
-    return feature_list
+                discrete_feature_list.iloc[j, i] = 1
+    return discrete_feature_list
 
 
+# build the tree
 def decision_tree(feature_list: pd.DataFrame, label_list: pd.DataFrame):
     if len(label_list.unique()) == 1:
-        return label_list.iloc[0]
-    if len(feature_list.iloc[0]) == 1:
-        if len(feature_list.unique()) == 1:
-
-            label1_num = label_list[label_list == 1].count()
-            label2_num = label_list[label_list == 2].count()
-            label3_num = label_list[label_list == 3].count()
-            max_label = max(label1_num, label2_num, label3_num)
-            if max_label == label1_num:
-                return 1
-            elif max_label == label2_num:
-                return 2
-            else:
-                return 3
+        return int(label_list.iloc[0])
     divide_vals = data_preprocess(feature_list, label_list)
     discrete_feature_list = generate_feature_list(feature_list, divide_vals)
     best_feature = calc_gain(discrete_feature_list, label_list)
-    tree_node = {best_feature: {}}
+    best_feature_name = feature_list.columns[best_feature]
+    tree_node = {best_feature_name: {}}
     example_num = feature_list.shape[0]
     example_larger = []
     example_not_larger = []
@@ -122,16 +113,50 @@ def decision_tree(feature_list: pd.DataFrame, label_list: pd.DataFrame):
     sub_feature1 = feature_list.iloc[example_larger, :]
     for i in range(2):
         if i == 0:
-            tree_node[best_feature][f'<={divide_vals[best_feature]}'] = decision_tree(sub_feature0, sub_label0)
+            tree_node[best_feature_name][f'<={divide_vals[best_feature]}'] = decision_tree(sub_feature0, sub_label0)
         if i == 1:
-            tree_node[best_feature][f'>{divide_vals[best_feature]}'] = decision_tree(sub_feature1, sub_label1)
+            tree_node[best_feature_name][f'>{divide_vals[best_feature]}'] = decision_tree(sub_feature1, sub_label1)
     return tree_node
+
+
+# inference
+def inference(tree, feature_name, test_features):
+    if isinstance(tree, int):
+        return tree
+    for key in tree:
+        if key[0] == '<' or key[0] == '>':
+            if key[0] == '<':
+                divide_value = float(key[2:])
+                if float(test_features[feature_name]) <= divide_value:
+                    return inference(tree[key], feature_name, test_features)
+            else:
+                divide_value = float(key[1:])
+                if float(test_features[feature_name]) > divide_value:
+                    return inference(tree[key], feature_name, test_features)
+        else:
+            feature_name = key
+            return inference(tree[key], feature_name, test_features)
 
 
 if __name__ == '__main__':
     df_data = load_data()
+    df_data.columns = ['1', '2', '3', '4', 'label']
     df_label = df_data.iloc[:, -1]
     df_feature = df_data.iloc[:, :-1]
-    divide_val = data_preprocess(df_feature, df_label)
-    new_df_feature = generate_feature_list(df_feature, divide_val)
-    print(decision_tree(df_feature, df_label))
+    df_feature_f1 = df_feature.iloc[0]
+
+    df_test_data = load_data(data_path='./data/testdata.txt')
+    df_test_data.columns = ['1', '2', '3', '4', 'label']
+    df_test_label = df_test_data.iloc[:, -1]
+    df_test_feature = df_test_data.iloc[:, :-1]
+
+    my_tree = decision_tree(df_feature, df_label)
+    treePlotter.createPlot(my_tree)
+    correct = 0
+    for i in range(df_test_feature.shape[0]):
+        if inference(my_tree, '0', df_test_feature.iloc[i]) == int(df_test_label.iloc[i]):
+            correct += 1
+        else:
+            inference_ans = inference(my_tree, '0', df_test_feature.iloc[i])
+            print(f'No.{i} is wrong, inference answer is {inference_ans}, right answer is {df_test_label.iloc[i]}')
+    print('accuracy:', correct / df_test_feature.shape[0])
