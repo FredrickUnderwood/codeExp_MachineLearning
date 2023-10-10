@@ -140,13 +140,13 @@ def inference(tree, feature_name, test_features):
 
 if __name__ == '__main__':
     df_data = load_data()
-    df_data.columns = ['1', '2', '3', '4', 'label']
+    df_data.columns = ['feature1', 'feature2', 'feature3', 'feature4', 'label']
     df_label = df_data.iloc[:, -1]
     df_feature = df_data.iloc[:, :-1]
     df_feature_f1 = df_feature.iloc[0]
 
     df_test_data = load_data(data_path='./data/testdata.txt')
-    df_test_data.columns = ['1', '2', '3', '4', 'label']
+    df_test_data.columns = ['feature1', 'feature2', 'feature3', 'feature4', 'label']
     df_test_label = df_test_data.iloc[:, -1]
     df_test_feature = df_test_data.iloc[:, :-1]
 
