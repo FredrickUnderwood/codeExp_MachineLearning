@@ -25,22 +25,20 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def softmax(y_hat):
+def softmax(y_hat: np.ndarray):
     exp_sum = 0
     exp_list = []
-    softmax_list = []
-    if isinstance(y_hat, list):
-        for i in range(len(y_hat)):
-            exp_list.append(np.exp(y_hat[i]))
-            exp_sum += np.exp(y_hat[i])
-        for i in range(len(y_hat)):
-            softmax_list.append((exp_list[i] / exp_sum))
-    else:
-        for i in range(y_hat.shape[0]):
-            exp_list.append(np.exp(y_hat.iloc[i]))
-            exp_sum += np.exp(y_hat.iloc[i])
-        for i in range(y_hat.shape[0]):
-            softmax_list.append((exp_list[i] / exp_sum))
+    softmax_list = np.zeros_like(y_hat)
+    example_num = y_hat.shape[0]
+    label_num = y_hat.shape[1]
+    for i in range(example_num):
+        for j in range(label_num):
+            exp_sum += np.exp(y_hat[i, j])
+            exp_list.append(np.exp(y_hat[i, j]))
+        for j in range(label_num):
+            softmax_list[i, j] = exp_list[j] / exp_sum
+        exp_sum = 0
+        exp_list = []
     return softmax_list
 
 
@@ -48,12 +46,19 @@ def train(feature_list: pd.DataFrame, label_list: pd.DataFrame, hidden_layer: in
           num_epochs: int):
     example_num = feature_list.shape[0]
     df_bias = pd.DataFrame(-1, index=range(example_num), columns=[-1])
-    feature_list_bias = pd.concat([df_bias, feature_list], axis=1)
+    feature_list_bias = pd.concat([df_bias, feature_list], axis=1)  # (75, 5)
     in_feature = feature_list_bias.shape[1]
     out_num = label_list.shape[1]
-    w1 = np.random.randn(in_feature, hidden_layer)
-    w2 = np.random.randn(hidden_layer, out_num)
-    for epoch in range(num_epochs):
+    w1 = np.random.randn(in_feature, hidden_layer)  # (5, 10)
+    w2 = np.random.randn(hidden_layer, out_num)  # (10, 3)
+    for _ in range(num_epochs):
+        h = np.dot(feature_list_bias, w1)  # (75, 10)
+        h_activate = sigmoid(h)
+        y = np.dot(h_activate, w2)  # (75, 3)
+        y_hat = softmax(y)
+        loss = ((y_hat - label_list) ** 2) / 2
+        d1 = (y_hat - label_list) * (y_hat) * (1 - y_hat)
+
         
 
 
